@@ -20,7 +20,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   double progressVal = 0;
-  double maxVal = 10;
+  double maxVal = Boxes.getData().length.toDouble();
   TimeOfDay selectedTime = TimeOfDay.now();
   DateTime selectedDate = DateTime.now();
 
@@ -33,11 +33,12 @@ class _HomePageState extends State<HomePage> {
   TextEditingController descController = TextEditingController();
   TextEditingController priorityController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
-  var boxLength = Boxes.getData().length;
 
-  void updateProgress(double newValue) {
+  void updateTaskCount() {
     setState(() {
-      progressVal = newValue;
+      final box = Boxes.getData();
+      maxVal = box.length.toDouble();
+      progressVal = maxVal; // For displaying total task count in progress indicator
     });
   }
 
@@ -76,7 +77,7 @@ class _HomePageState extends State<HomePage> {
             TextButton(
                 onPressed: () {
                   final dateFormat =
-                      DateFormat('yyyy-MM-dd').format(selectedDate);
+                  DateFormat('yyyy-MM-dd').format(selectedDate);
                   final timeFormat = selectedTime.format(context);
                   final data = TaskModel(
                       priority: priorityController.text,
@@ -86,8 +87,6 @@ class _HomePageState extends State<HomePage> {
                       date: dateFormat.toString(),
                       time: timeFormat.toString());
 
-                  // Debug print to check the data
-
                   final box = Boxes.getData();
                   box.add(data);
                   data.save();
@@ -96,6 +95,8 @@ class _HomePageState extends State<HomePage> {
                   descController.clear();
                   priorityController.clear();
                   categoryController.clear();
+
+                  updateTaskCount();
 
                   Navigator.pop(context);
                 },
@@ -140,30 +141,34 @@ class _HomePageState extends State<HomePage> {
                         alignment: Alignment.topLeft,
                         child: ElevatedButton(
                           style: ButtonStyle(backgroundColor:
-                              WidgetStateProperty.resolveWith<Color?>(
-                            (states) {
+                          MaterialStateProperty.resolveWith<Color?>(
+                                (states) {
                               return Colors.black87;
                             },
                           )),
                           onPressed: () {
                             _selectTime(context);
                           },
-                          child:  Text("Select Time", style: GoogleFonts.outfit(color: Colors.white) ,),
+                          child: Text(
+                            "Select Time",
+                            style: GoogleFonts.outfit(color: Colors.white),
+                          ),
                         ),
                       ),
                       const Padding(padding: EdgeInsets.all(5)),
-
                       ElevatedButton(
-                      style: ButtonStyle(backgroundColor:
-                      WidgetStateProperty.resolveWith<Color?>(
-                            (states) {
-                          return const Color.fromRGBO(78, 52, 241, 50);
-                        },
-                      )),
+                        style: ButtonStyle(
+                            backgroundColor:
+                            MaterialStateProperty.resolveWith<Color?>(
+                                  (states) {
+                                return const Color.fromRGBO(78, 52, 241, 50);
+                              },
+                            )),
                         onPressed: () {
                           _selectDate(context);
                         },
-                        child:  Text("Select Date",style: GoogleFonts.outfit(color: Colors.white)),
+                        child: Text("Select Date",
+                            style: GoogleFonts.outfit(color: Colors.white)),
                       ),
                     ],
                   ),
@@ -195,8 +200,7 @@ class _HomePageState extends State<HomePage> {
               const Spacer(),
               GestureDetector(
                 onTap: () {
-                  updateProgress(
-                      boxLength.toDouble()); // Change this value to test
+                  updateTaskCount();
                 },
                 child: const Icon(Icons.refresh, color: Colors.black87),
               ),
@@ -212,7 +216,7 @@ class _HomePageState extends State<HomePage> {
                   alignment: Alignment.topCenter,
                   child: Padding(
                     padding:
-                        EdgeInsets.symmetric(vertical: screenHeight * 0.02),
+                    EdgeInsets.symmetric(vertical: screenHeight * 0.02),
                     child: Container(
                       height: 180,
                       width: 180,
@@ -221,8 +225,8 @@ class _HomePageState extends State<HomePage> {
                         maxVal: maxVal,
                         completionColor: Colors.cyan,
                         incompleteColor: Colors.cyan.shade100,
-                        progressIndicatorText: progressVal != 0
-                            ? '$progressVal / $maxVal \nTask Completed'
+                        progressIndicatorText: maxVal != 0
+                            ? '$maxVal Tasks Created'
                             : 'No Task Created',
                       ),
                     ),
