@@ -1,5 +1,6 @@
 import 'dart:core';
-
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +11,13 @@ import 'package:todo_app/Reusable%20components/progress_indicator.dart';
 import 'package:todo_app/Reusable%20components/route.dart';
 import 'package:todo_app/boxes/box.dart';
 import 'package:todo_app/models/task_model.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:todo_app/main.dart';
+
+
+const String channelId = 'task_reminder_channel';
+const String channelName = 'Task Reminders';
+const String channelDescription = 'Channel for task reminder notifications';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,13 +27,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  double progressVal = 0;
-  double maxVal = Boxes.getData().length.toDouble();
+  var location=tz.getLocation('Asia/Kolkata');
+
+
+  double progressVal = 1;
+  double maxVal = 1; // Initialize maxVal to 1 to avoid issues
   TimeOfDay selectedTime = TimeOfDay.now();
   DateTime selectedDate = DateTime.now();
 
-  List<String> taskPriority = ['High', 'Medium', 'Low'];
-  String selectedVal = 'Low';
 
   RouteFunction homeScreenRoute = RouteFunction();
 
@@ -34,11 +43,19 @@ class _HomePageState extends State<HomePage> {
   TextEditingController priorityController = TextEditingController();
   TextEditingController categoryController = TextEditingController();
 
+
+  @override
+  void initState() {
+    super.initState();
+    updateTaskCount();
+  }
+
   void updateTaskCount() {
     setState(() {
       final box = Boxes.getData();
-      maxVal = box.length.toDouble();
-      progressVal = maxVal; // For displaying total task count in progress indicator
+      maxVal = box != null && box.isNotEmpty ? box.length.toDouble() : 1;
+      progressVal =
+          maxVal; // For displaying total task count in progress indicator
     });
   }
 
@@ -67,6 +84,26 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> scheduleAlarm(DateTime scheduledDate) async {
+    var androidChannelSpecifics = const AndroidNotificationDetails(
+        'todo_app',
+        'todo_app',
+        channelDescription: 'this is a todo app',
+        icon: 'img'
+    );
+    var platformSpecifics = NotificationDetails(android: androidChannelSpecifics);
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0,
+      'Task Reminder',
+      'You have a task due',
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      platformSpecifics,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle
+    );
+  }
+
   Future<void> _showDialog() async {
     return showDialog(
       context: context,
@@ -75,9 +112,9 @@ class _HomePageState extends State<HomePage> {
           title: const Text("Add Task"),
           actions: [
             TextButton(
-                onPressed: () {
-                  final dateFormat =
-                  DateFormat('yyyy-MM-dd').format(selectedDate);
+                onPressed: () async {
+                  final dateFormat = DateFormat('yyyy-MM-dd').format(
+                      selectedDate);
                   final timeFormat = selectedTime.format(context);
                   final data = TaskModel(
                       priority: priorityController.text,
@@ -91,6 +128,20 @@ class _HomePageState extends State<HomePage> {
                   box.add(data);
                   data.save();
 
+                  // Schedule the alarm
+                  DateTime scheduledDate = DateFormat('yyyy-MM-dd').parse(
+                      dateFormat);
+                  scheduledDate = DateTime(
+                    scheduledDate.year,
+                    scheduledDate.month,
+                    scheduledDate.day,
+                    selectedTime.hour,
+                    selectedTime.minute,
+                  );
+                  Navigator.pop(context);
+                  await scheduleAlarm(selectedDate);
+
+
                   titleController.clear();
                   descController.clear();
                   priorityController.clear();
@@ -98,7 +149,6 @@ class _HomePageState extends State<HomePage> {
 
                   updateTaskCount();
 
-                  Navigator.pop(context);
                 },
                 child: const Text("Add")),
             TextButton(
@@ -264,4 +314,5 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+
 }
